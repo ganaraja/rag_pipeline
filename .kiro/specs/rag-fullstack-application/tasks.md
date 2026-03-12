@@ -1,0 +1,418 @@
+# Implementation Plan: RAG Full-Stack Application
+
+## Overview
+
+This implementation plan breaks down the RAG full-stack application into discrete coding tasks. The system consists of a React + TypeScript frontend, FastAPI backend with sophisticated multi-embedding retrieval, Qdrant vector database integration, and Ollama LLM integration.
+
+The implementation follows a bottom-up approach: core backend components first, then API endpoints, followed by frontend components, and finally integration and testing.
+
+## Tasks
+
+- [x] 1. Project setup and dependency management
+  - Create project directory structure (frontend/, backend/, tests/)
+  - Create pyproject.toml with all backend dependencies (FastAPI, Qdrant, sentence-transformers, docling, chonkie, etc.)
+  - Create package.json with frontend dependencies (React, TypeScript, Jest, React Testing Library)
+  - Set up UV for Python dependency management
+  - Configure TypeScript with tsconfig.json
+  - Set up Jest configuration for frontend testing
+  - Set up pytest configuration for backend testing
+  - _Requirements: 1.1, 1.2, 20.1, 20.2, 20.3, 20.4, 20.5_
+
+- [x] 2. Backend data models and schemas
+  - [x] 2.1 Create Pydantic models for all data structures
+    - Implement DocumentChunk, ParentChunk, SemanticChunk, ContextualChunk, LateChunk models
+    - Implement CreateCollectionRequest, CreateCollectionResponse, DeleteCollectionResponse models
+    - Implement UploadResponse, QueryRequest, QueryResponse, RetrievalResult models
+    - Implement SparseVector, MultiVectorEmbedding, AllEmbeddings models
+    - Add field validation and constraints
+    - _Requirements: 8.7, 17.2, 19.4_
+  - [x] 2.2 Write unit tests for data models
+    - Test field validation and constraints
+    - Test serialization and deserialization
+    - Test edge cases for string lengths and numeric ranges
+    - _Requirements: 21.2, 21.3_
+
+- [x] 3. Qdrant database manager implementation
+  - [x] 3.1 Implement QdrantManager class
+    - Initialize Qdrant client with local path
+    - Implement create_collection with multi-vector configuration (matryoshka_64, matryoshka_768, colbert, splade)
+    - Implement list_collections method
+    - Implement delete_collection method
+    - Implement store_points method for storing chunks with all embedding types
+    - Implement query_with_prefetch for multi-stage retrieval
+    - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8, 14.9, 14.10_
+  - [x] 3.2 Write unit tests for QdrantManager
+    - Test collection creation with correct vector configurations
+    - Test collection listing and deletion
+    - Test point storage with multiple vector types
+    - Test query operations
+    - _Requirements: 21.2, 21.3_
+
+- [x] 4. Embedding model manager implementation
+  - [x] 4.1 Implement EmbeddingModelManager class
+    - Initialize all embedding models (Matryoshka, ColBERT, SPLADE, Cross-encoder)
+    - Implement device selection logic (cuda, mps, cpu, auto)
+    - Implement generate_matryoshka_64 method
+    - Implement generate_matryoshka_768 method
+    - Implement generate_colbert method for multi-vector embeddings
+    - Implement generate_splade method for sparse embeddings
+    - Implement rerank method using cross-encoder
+    - Add batch processing support for efficiency
+    - NOTE: Torch imports commented out for cross-platform compatibility
+    - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 12.1, 12.2, 12.3, 12.4, 12.5, 13.1, 13.2, 13.3, 13.4, 13.5_
+  - [x] 4.2 Write property test for embedding dimensionality consistency
+    - **Property 1: Embedding dimensionality invariance**
+    - **Validates: Requirements 23.1**
+    - Test that Matryoshka 64D embeddings are always 64-dimensional
+    - Test that Matryoshka 768D embeddings are always 768-dimensional
+    - Test that ColBERT embeddings are always 128-dimensional per token
+  - [x] 4.3 Write property test for Matryoshka truncation property
+    - **Property 2: Matryoshka truncation consistency**
+    - **Validates: Requirements 23.2**
+    - Test that 64D embeddings are truncations of 768D embeddings
+    - Verify first 64 dimensions of 768D match 64D embeddings
+  - [x] 4.4 Write property test for embedding normalization
+    - **Property 3: Vector normalization invariance**
+    - **Validates: Requirements 23.3**
+    - Test that all Matryoshka embeddings are normalized (L2 norm = 1)
+    - Test for all text inputs
+  - [x] 4.5 Write unit tests for embedding generation
+    - Test batch processing functionality
+    - Test error handling for invalid inputs
+    - Test GPU/CPU device selection
+    - _Requirements: 21.2, 21.3_
+
+- [ ] 5. Chunking pipeline implementation
+  - [x] 5.1 Implement ChunkingStrategy class
+    - Initialize Docling converter for document parsing
+    - Initialize Chonkie semantic chunker
+    - Implement process_document method orchestrating full pipeline
+    - Implement \_parse_with_docling for parent chunk extraction
+    - Implement \_semantic_chunk for semantic segmentation
+    - Implement \_contextual_chunk for LLM-based enrichment (optional)
+    - Implement \_late_chunk for Jina late chunking (optional)
+    - Implement pretty_print method for round-trip testing
+    - Add metadata tracking (chunk_id, parent_id, start_char, end_char)
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7_
+  - [x] 5.2 Write property test for chunking round-trip consistency
+    - **Property 4: Chunking round-trip invariance**
+    - **Validates: Requirements 22.1, 22.2**
+    - Test that parse → chunk → pretty_print → re-parse produces equivalent structures
+    - Test for various document types (PDF, Markdown, plain text)
+  - [x] 5.3 Write unit tests for chunking pipeline
+    - Test parent chunk extraction with Docling
+    - Test semantic chunking with various chunk sizes
+    - Test metadata preservation
+    - Test error handling for invalid documents
+    - _Requirements: 21.2, 21.3_
+
+- [ ] 6. Retrieval pipeline implementation
+  - [x] 6.1 Implement MultiEmbeddingRetrievalPipeline class
+    - Initialize with QdrantManager and EmbeddingModelManager
+    - Implement retrieve method orchestrating full pipeline
+    - Implement \_hybrid_search_with_prefetch using Qdrant prefetch (optimized)
+    - Implement \_hybrid_search_naive for sequential filtering (comparison)
+    - Implement \_cross_encoder_rerank for final precision optimization
+    - Add logging for each retrieval stage
+    - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.7, 16.1, 16.2, 16.3, 16.4, 16.5, 16.6, 16.7_
+  - [x] 6.2 Write property test for retrieval idempotence
+    - **Property 5: Retrieval determinism**
+    - **Validates: Requirements 24.1, 24.2**
+    - Test that identical queries return identical results
+    - Test for multiple query executions
+  - [x] 6.3 Write unit tests for retrieval pipeline
+    - Test each retrieval stage independently
+    - Test prefetch vs naive implementation comparison
+    - Test cross-encoder reranking
+    - Test error handling for empty collections
+    - _Requirements: 21.2, 21.3_
+
+- [x] 7. LLM client implementation
+  - [x] 7.1 Implement LLMClient class
+    - Initialize OpenAI client with Ollama configuration
+    - Implement generate_answer method
+    - Implement \_construct_prompt for context formatting
+    - Add error handling for connection failures
+    - Add retry logic for transient failures
+    - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7_
+  - [x] 7.2 Write unit tests for LLM client
+    - Test prompt construction with various context sizes
+    - Test error handling for connection failures
+    - Test retry logic
+    - Mock Ollama responses for testing
+    - _Requirements: 21.2, 21.3_
+
+- [x] 8. Checkpoint - Ensure all backend core components pass tests
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 9. FastAPI application and collection management endpoints
+  - [x] 9.1 Create FastAPI application with CORS configuration
+    - Initialize FastAPI app
+    - Configure CORS middleware for frontend access
+    - Set up global exception handlers
+    - Add request logging middleware
+    - _Requirements: 8.1, 17.1, 19.1_
+  - [x] 9.2 Implement GET /api/collections endpoint
+    - Call QdrantManager.list_collections
+    - Return list of collection names
+    - Handle Qdrant connection errors with 500 response
+    - _Requirements: 19.1, 2.4_
+  - [x] 9.3 Implement POST /api/collections endpoint
+    - Validate collection name from request body
+    - Call QdrantManager.create_collection
+    - Return success response with collection name
+    - Handle validation errors with 400 response
+    - Handle duplicate collection errors with 409 response
+    - Handle creation failures with 500 response
+    - _Requirements: 19.2, 19.4, 3.3, 3.4, 3.5, 3.6, 3.7_
+  - [x] 9.4 Implement DELETE /api/collections/{name} endpoint
+    - Validate collection exists
+    - Call QdrantManager.delete_collection
+    - Return success response
+    - Handle not found errors with 404 response
+    - Handle deletion failures with 500 response
+    - _Requirements: 19.3, 19.5, 19.6, 19.7, 4.4, 4.5, 4.6_
+  - [x] 9.5 Write integration tests for collection management endpoints
+    - Test collection creation, listing, and deletion flow
+    - Test error handling for invalid inputs
+    - Test concurrent operations
+    - _Requirements: 21.2, 21.3_
+
+- [ ] 10. Document upload endpoint implementation
+  - [~] 10.1 Implement POST /api/upload endpoint
+    - Accept multipart/form-data with file and collection_name
+    - Validate file format (PDF, Word, Markdown)
+    - Validate collection exists
+    - Save uploaded file temporarily
+    - Call ChunkingStrategy.process_document
+    - Generate all embeddings using EmbeddingModelManager
+    - Store points in Qdrant using QdrantManager.store_points
+    - Return processing statistics (chunks_created, processing_time)
+    - Clean up temporary files
+    - Handle validation errors with 400 response
+    - Handle processing failures with 500 response
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 5.4, 5.5, 5.6, 5.7_
+  - [~] 10.2 Write integration tests for upload endpoint
+    - Test successful upload with various file formats
+    - Test validation errors for invalid files
+    - Test error handling for non-existent collections
+    - Test processing statistics accuracy
+    - _Requirements: 21.2, 21.3_
+
+- [ ] 11. Query endpoint implementation
+  - [~] 11.1 Implement POST /api/query endpoint
+    - Validate query text and collection_name from request body
+    - Generate query embeddings using EmbeddingModelManager
+    - Execute retrieval pipeline using MultiEmbeddingRetrievalPipeline.retrieve
+    - Generate answer using LLMClient.generate_answer
+    - Return QueryResponse with answer, sources, and timing metrics
+    - Handle validation errors with 400 response
+    - Handle no results with 404 response
+    - Handle retrieval/LLM failures with 500 response
+    - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6, 17.7, 17.8, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
+  - [~] 11.2 Write integration tests for query endpoint
+    - Test successful query with answer generation
+    - Test validation errors for empty queries
+    - Test error handling for non-existent collections
+    - Test timing metrics accuracy
+    - _Requirements: 21.2, 21.3_
+
+- [ ] 12. Error handling and validation implementation
+  - [~] 12.1 Implement comprehensive error handling across all endpoints
+    - Add descriptive error messages for all error types
+    - Add timeout handling for network operations
+    - Add database-specific error details
+    - Add LLM connection error messages
+    - Add error logging with timestamps and context
+    - _Requirements: 25.1, 25.2, 25.3, 25.4, 25.5_
+  - [~] 12.2 Write tests for error handling
+    - Test all error scenarios for each endpoint
+    - Test error message clarity and completeness
+    - Test logging functionality
+    - _Requirements: 21.2, 21.3_
+
+- [~] 13. Checkpoint - Ensure all backend API tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 14. Frontend project setup and shared utilities
+  - [x] 14.1 Create React + TypeScript project structure
+    - Set up src/ directory with components/, services/, types/, utils/ subdirectories
+    - Create index.tsx entry point
+    - Create App.tsx root component
+    - Configure TypeScript strict mode
+    - _Requirements: 1.1, 1.3_
+  - [x] 14.2 Create TypeScript type definitions
+    - Define all frontend data models (Collection, CreateCollectionRequest, UploadRequest, QueryRequest, etc.)
+    - Create types/api.ts with all API request/response types
+    - Create types/models.ts with domain models
+    - _Requirements: 1.1_
+  - [x] 14.3 Create API service layer
+    - Implement services/api.ts with axios client
+    - Implement listCollections, createCollection, deleteCollection functions
+    - Implement uploadDocument function
+    - Implement queryDocuments function
+    - Add error handling and response parsing
+    - _Requirements: 2.4, 3.4, 4.4, 5.4, 7.1_
+  - [x] 14.4 Write unit tests for API service layer
+    - Mock axios responses
+    - Test all API functions
+    - Test error handling
+    - _Requirements: 1.2, 1.4_
+
+- [ ] 15. Admin interface - Collection management components
+  - [x] 15.1 Implement CollectionManager component
+    - Create dropdown combo box for collection selection
+    - Fetch collections from API on mount
+    - Display "None" when no collections exist
+    - Display default collection as selected
+    - Handle collection change events
+    - Display error messages for fetch failures
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+  - [~] 15.2 Write tests for CollectionManager component
+    - Test rendering with empty collection list
+    - Test rendering with collections
+    - Test collection selection
+    - Test error handling
+    - Use React Testing Library
+    - _Requirements: 1.2, 1.4_
+  - [~] 15.3 Implement CollectionCreator component
+    - Create "Create" button
+    - Display input textbox on button click
+    - Validate collection name (non-empty, Qdrant requirements)
+    - Call API to create collection
+    - Display success message on creation
+    - Display error message on failure
+    - Trigger parent refresh on success
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+  - [~] 15.4 Write tests for CollectionCreator component
+    - Test button click shows input
+    - Test validation errors
+    - Test successful creation flow
+    - Test error handling
+    - _Requirements: 1.2, 1.4_
+  - [~] 15.5 Implement CollectionDeleter component
+    - Create "Delete" button
+    - Display error when no collection selected
+    - Display confirmation prompt on delete click
+    - Call API to delete collection on confirmation
+    - Display success message on deletion
+    - Display error message on failure
+    - Trigger parent refresh on success
+    - Handle cancellation without action
+    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
+  - [~] 15.6 Write tests for CollectionDeleter component
+    - Test error when no collection selected
+    - Test confirmation prompt display
+    - Test successful deletion flow
+    - Test cancellation flow
+    - Test error handling
+    - _Requirements: 1.2, 1.4_
+
+- [x] 16. Admin interface - File upload component
+  - [x] 16.1 Implement FileUploader component
+    - Create file input with filename display
+    - Display selected filename
+    - Validate file selection (non-empty)
+    - Validate collection selection
+    - Call API to upload file with collection name
+    - Display upload progress indicator
+    - Display success message with processing statistics
+    - Display error message on failure
+    - Support PDF, Word, Markdown formats
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
+  - [x] 16.2 Write tests for FileUploader component
+    - Test file selection and display
+    - Test validation errors
+    - Test successful upload flow
+    - Test progress indicator
+    - Test error handling
+    - _Requirements: 1.2, 1.4_
+
+- [x] 17. User interface - Chat components
+  - [x] 17.1 Implement ChatInterface component
+    - Create message history display with user/assistant messages
+    - Create input field for query entry
+    - Create send button
+    - Display loading indicator during query processing
+    - Auto-scroll to latest message
+    - Display timestamps for each message
+    - Display source chunks as expandable references
+    - Disable input during processing
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
+  - [x] 17.2 Write tests for ChatInterface component
+    - Test message display
+    - Test input and send functionality
+    - Test loading state
+    - Test auto-scroll behavior
+    - Test source chunk display
+    - Test error handling
+    - _Requirements: 1.2, 1.4_
+  - [x] 17.3 Implement styling inspired by layla.ai and Amazon.com
+    - Create CSS modules for chat interface
+    - Implement modern, clean design
+    - Add responsive layout
+    - Add smooth animations for messages
+    - Style source chunks as collapsible cards
+    - _Requirements: 6.1_
+
+- [x] 18. Main application integration
+  - [x] 18.1 Implement App.tsx root component
+    - Create layout with admin and user interface sections
+    - Implement tab/navigation between admin and user views
+    - Pass selected collection to ChatInterface
+    - Add global error boundary
+    - Add loading states
+    - _Requirements: 1.3_
+  - [x] 18.2 Create main.tsx entry point
+    - Set up React root
+    - Add global styles
+    - Configure error handling
+    - _Requirements: 1.1_
+  - [x] 18.3 Write integration tests for App component
+    - Test navigation between admin and user views
+    - Test collection selection propagation
+    - Test error boundary
+    - _Requirements: 1.2, 1.4_
+
+- [x] 19. Checkpoint - Ensure all frontend tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 20. End-to-end integration and deployment preparation
+  - [~] 20.1 Create backend startup script
+    - Create main.py with uvicorn server configuration
+    - Add environment variable configuration
+    - Add startup logging
+    - _Requirements: 8.1_
+  - [~] 20.2 Create frontend build configuration
+    - Configure Vite or webpack for production builds
+    - Set up environment variables for API URL
+    - Configure proxy for development
+    - _Requirements: 1.1_
+  - [~] 20.3 Create README with setup instructions
+    - Document UV installation and dependency setup
+    - Document frontend npm installation
+    - Document Ollama setup requirements
+    - Document Qdrant setup (local mode)
+    - Document running backend and frontend
+    - Document running tests
+    - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5_
+  - [~] 20.4 Create .env.example files
+    - Backend environment variables (Ollama URL, Qdrant path, model names)
+    - Frontend environment variables (API URL)
+    - _Requirements: 18.7_
+
+- [~] 21. Final checkpoint - Full system verification
+  - Ensure all tests pass, ask the user if questions arise.
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- Each task references specific requirements for traceability
+- Checkpoints ensure incremental validation at major milestones
+- Property tests validate universal correctness properties from the design
+- Unit tests validate specific examples and edge cases
+- Integration tests validate component interactions
+- The implementation uses Python for backend and TypeScript for frontend as specified in the design
+- Backend uses FastAPI, Qdrant, sentence-transformers, docling, chonkie, and Ollama
+- Frontend uses React, TypeScript, Jest, and React Testing Library
+- Dependency management uses UV for Python and npm for JavaScript
