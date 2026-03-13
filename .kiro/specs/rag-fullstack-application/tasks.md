@@ -178,8 +178,8 @@ The implementation follows a bottom-up approach: core backend components first, 
     - Test concurrent operations
     - _Requirements: 21.2, 21.3_
 
-- [ ] 10. Document upload endpoint implementation
-  - [~] 10.1 Implement POST /api/upload endpoint
+- [x] 10. Document upload endpoint implementation
+  - [x] 10.1 Implement POST /api/upload endpoint
     - Accept multipart/form-data with file and collection_name
     - Validate file format (PDF, Word, Markdown)
     - Validate collection exists
@@ -192,15 +192,15 @@ The implementation follows a bottom-up approach: core backend components first, 
     - Handle validation errors with 400 response
     - Handle processing failures with 500 response
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 5.4, 5.5, 5.6, 5.7_
-  - [~] 10.2 Write integration tests for upload endpoint
+  - [x] 10.2 Write integration tests for upload endpoint
     - Test successful upload with various file formats
     - Test validation errors for invalid files
     - Test error handling for non-existent collections
     - Test processing statistics accuracy
     - _Requirements: 21.2, 21.3_
 
-- [ ] 11. Query endpoint implementation
-  - [~] 11.1 Implement POST /api/query endpoint
+- [x] 11. Query endpoint implementation
+  - [x] 11.1 Implement POST /api/query endpoint
     - Validate query text and collection_name from request body
     - Generate query embeddings using EmbeddingModelManager
     - Execute retrieval pipeline using MultiEmbeddingRetrievalPipeline.retrieve
@@ -210,28 +210,28 @@ The implementation follows a bottom-up approach: core backend components first, 
     - Handle no results with 404 response
     - Handle retrieval/LLM failures with 500 response
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.5, 17.6, 17.7, 17.8, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
-  - [~] 11.2 Write integration tests for query endpoint
+  - [x] 11.2 Write integration tests for query endpoint
     - Test successful query with answer generation
     - Test validation errors for empty queries
     - Test error handling for non-existent collections
     - Test timing metrics accuracy
     - _Requirements: 21.2, 21.3_
 
-- [ ] 12. Error handling and validation implementation
-  - [~] 12.1 Implement comprehensive error handling across all endpoints
+- [x] 12. Error handling and validation implementation
+  - [x] 12.1 Implement comprehensive error handling across all endpoints
     - Add descriptive error messages for all error types
     - Add timeout handling for network operations
     - Add database-specific error details
     - Add LLM connection error messages
     - Add error logging with timestamps and context
     - _Requirements: 25.1, 25.2, 25.3, 25.4, 25.5_
-  - [~] 12.2 Write tests for error handling
+  - [x] 12.2 Write tests for error handling
     - Test all error scenarios for each endpoint
     - Test error message clarity and completeness
     - Test logging functionality
     - _Requirements: 21.2, 21.3_
 
-- [~] 13. Checkpoint - Ensure all backend API tests pass
+- [x] 13. Checkpoint - Ensure all backend API tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 14. Frontend project setup and shared utilities
@@ -259,7 +259,7 @@ The implementation follows a bottom-up approach: core backend components first, 
     - Test error handling
     - _Requirements: 1.2, 1.4_
 
-- [ ] 15. Admin interface - Collection management components
+- [x] 15. Admin interface - Collection management components
   - [x] 15.1 Implement CollectionManager component
     - Create dropdown combo box for collection selection
     - Fetch collections from API on mount
@@ -268,14 +268,14 @@ The implementation follows a bottom-up approach: core backend components first, 
     - Handle collection change events
     - Display error messages for fetch failures
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
-  - [~] 15.2 Write tests for CollectionManager component
+  - [x] 15.2 Write tests for CollectionManager component
     - Test rendering with empty collection list
     - Test rendering with collections
     - Test collection selection
     - Test error handling
     - Use React Testing Library
     - _Requirements: 1.2, 1.4_
-  - [~] 15.3 Implement CollectionCreator component
+  - [x] 15.3 Implement CollectionCreator component
     - Create "Create" button
     - Display input textbox on button click
     - Validate collection name (non-empty, Qdrant requirements)
@@ -284,13 +284,13 @@ The implementation follows a bottom-up approach: core backend components first, 
     - Display error message on failure
     - Trigger parent refresh on success
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
-  - [~] 15.4 Write tests for CollectionCreator component
+  - [x] 15.4 Write tests for CollectionCreator component
     - Test button click shows input
     - Test validation errors
     - Test successful creation flow
     - Test error handling
     - _Requirements: 1.2, 1.4_
-  - [~] 15.5 Implement CollectionDeleter component
+  - [x] 15.5 Implement CollectionDeleter component
     - Create "Delete" button
     - Display error when no collection selected
     - Display confirmation prompt on delete click
@@ -300,7 +300,7 @@ The implementation follows a bottom-up approach: core backend components first, 
     - Trigger parent refresh on success
     - Handle cancellation without action
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
-  - [~] 15.6 Write tests for CollectionDeleter component
+  - [x] 15.6 Write tests for CollectionDeleter component
     - Test error when no collection selected
     - Test confirmation prompt display
     - Test successful deletion flow
@@ -377,18 +377,18 @@ The implementation follows a bottom-up approach: core backend components first, 
 - [x] 19. Checkpoint - Ensure all frontend tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 20. End-to-end integration and deployment preparation
-  - [~] 20.1 Create backend startup script
+- [x] 20. End-to-end integration and deployment preparation
+  - [x] 20.1 Create backend startup script
     - Create main.py with uvicorn server configuration
     - Add environment variable configuration
     - Add startup logging
     - _Requirements: 8.1_
-  - [~] 20.2 Create frontend build configuration
+  - [x] 20.2 Create frontend build configuration
     - Configure Vite or webpack for production builds
     - Set up environment variables for API URL
     - Configure proxy for development
     - _Requirements: 1.1_
-  - [~] 20.3 Create README with setup instructions
+  - [x] 20.3 Create README with setup instructions
     - Document UV installation and dependency setup
     - Document frontend npm installation
     - Document Ollama setup requirements
@@ -396,12 +396,12 @@ The implementation follows a bottom-up approach: core backend components first, 
     - Document running backend and frontend
     - Document running tests
     - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5_
-  - [~] 20.4 Create .env.example files
+  - [x] 20.4 Create .env.example files
     - Backend environment variables (Ollama URL, Qdrant path, model names)
     - Frontend environment variables (API URL)
     - _Requirements: 18.7_
 
-- [~] 21. Final checkpoint - Full system verification
+- [x] 21. Final checkpoint - Full system verification
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
