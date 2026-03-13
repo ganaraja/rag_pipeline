@@ -82,7 +82,7 @@ The implementation follows a bottom-up approach: core backend components first, 
     - Test GPU/CPU device selection
     - _Requirements: 21.2, 21.3_
 
-- [ ] 5. Chunking pipeline implementation
+- [x] 5. Chunking pipeline implementation
   - [x] 5.1 Implement ChunkingStrategy class
     - Initialize Docling converter for document parsing
     - Initialize Chonkie semantic chunker
@@ -106,7 +106,7 @@ The implementation follows a bottom-up approach: core backend components first, 
     - Test error handling for invalid documents
     - _Requirements: 21.2, 21.3_
 
-- [ ] 6. Retrieval pipeline implementation
+- [x] 6. Retrieval pipeline implementation
   - [x] 6.1 Implement MultiEmbeddingRetrievalPipeline class
     - Initialize with QdrantManager and EmbeddingModelManager
     - Implement retrieve method orchestrating full pipeline
@@ -234,7 +234,7 @@ The implementation follows a bottom-up approach: core backend components first, 
 - [x] 13. Checkpoint - Ensure all backend API tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 14. Frontend project setup and shared utilities
+- [x] 14. Frontend project setup and shared utilities
   - [x] 14.1 Create React + TypeScript project structure
     - Set up src/ directory with components/, services/, types/, utils/ subdirectories
     - Create index.tsx entry point
