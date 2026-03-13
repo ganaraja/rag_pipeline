@@ -118,29 +118,104 @@ This installs all required packages including:
 
 #### Configure Backend Environment
 
-Create a `.env` file in the `backend/` directory:
+Create a `.env` file in the project root directory:
 
 ```bash
-cd backend
-cp .env.example .env
+# Copy the template
+cp .env.template .env
 ```
 
-Edit `.env` to customize settings (optional):
+The `.env.template` file contains all available configuration options with detailed comments. Key settings to review:
+
 ```bash
-# backend/.env
-QDRANT_PATH=./qdrant_db
-OLLAMA_BASE_URL=http://localhost:11434/v1
+# Qdrant Configuration
+QDRANT_MODE=embedded              # Use "server" for production
+QDRANT_PATH=./qdrant_db          # For embedded mode
+QDRANT_HOST=localhost             # For server mode
+QDRANT_PORT=6333                  # For server mode
+QDRANT_API_KEY=                   # For Qdrant Cloud
+
+# LLM Configuration
+OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2
-EMBEDDING_DEVICE=cpu  # Use 'cuda' for GPU, 'mps' for Apple Silicon
-BACKEND_HOST=0.0.0.0
-BACKEND_PORT=8000
+LLM_TIMEOUT=60
+
+# Embedding Models
+MATRYOSHKA_MODEL=jinaai/jina-embeddings-v3
+COLBERT_MODEL=colbert-ir/colbertv2.0
+SPLADE_MODEL=naver/splade-v3
+DEVICE=cpu                        # Use "cuda" for GPU, "mps" for Apple Silicon
+
+# API Configuration
+API_HOST=0.0.0.0
+API_PORT=8000
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
-#### Qdrant Setup (Local Mode)
+See `.env.template` for complete documentation of all configuration options.
 
-Qdrant runs in **local mode** by default - no separate installation needed! The vector database is stored in the `./qdrant_db` directory and is automatically created when you start the backend.
+#### Qdrant Setup
 
-**Note**: For production deployments, you can use Qdrant Cloud or a self-hosted Qdrant server. Update `QDRANT_PATH` to a Qdrant URL if using a remote instance.
+Qdrant is the vector database used for storing and retrieving document embeddings. This application supports two modes:
+
+##### Embedded Mode (Development - Default)
+
+Qdrant runs **in-process** with your application - no separate installation needed!
+
+- Data is stored locally in the `./qdrant_db` directory
+- Automatically created when you start the backend
+- Perfect for development and testing
+- No additional setup required
+
+**Configuration** (in `.env`):
+```bash
+QDRANT_MODE=embedded
+QDRANT_PATH=./qdrant_db
+```
+
+##### Server Mode (Production - Recommended)
+
+Qdrant runs as a separate service, providing better performance and scalability.
+
+**Option 1: Docker (Recommended)**
+
+```bash
+# Run Qdrant in Docker
+docker run -d \
+  -p 6333:6333 \
+  -p 6334:6334 \
+  -v $(pwd)/qdrant_storage:/qdrant/storage \
+  --name qdrant \
+  qdrant/qdrant
+
+# Verify it's running
+curl http://localhost:6333/collections
+```
+
+**Option 2: Qdrant Cloud**
+
+1. Sign up at [cloud.qdrant.io](https://cloud.qdrant.io)
+2. Create a cluster
+3. Get your API key and cluster URL
+
+**Configuration** (in `.env`):
+```bash
+# For local Docker
+QDRANT_MODE=server
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+QDRANT_API_KEY=  # Leave empty for local Docker
+
+# For Qdrant Cloud
+QDRANT_MODE=server
+QDRANT_HOST=your-cluster.qdrant.io
+QDRANT_PORT=6333
+QDRANT_API_KEY=your-api-key-here
+```
+
+**When to use each mode:**
+- **Embedded**: Development, testing, single-user applications
+- **Server**: Production, multi-user applications, better performance
 
 ### 4. Frontend Setup
 
@@ -362,12 +437,30 @@ rag_pipeline/
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `QDRANT_PATH` | `./qdrant_db` | Path to Qdrant database directory |
-| `OLLAMA_BASE_URL` | `http://localhost:11434/v1` | Ollama API endpoint |
-| `OLLAMA_MODEL` | `gpt-oss:20b` | LLM model name |
-| `EMBEDDING_DEVICE` | `cpu` | Device for embeddings (cpu/cuda/mps) |
-| `BACKEND_HOST` | `0.0.0.0` | Server bind address |
-| `BACKEND_PORT` | `8000` | Server port |
+| `QDRANT_MODE` | `embedded` | Qdrant mode: "embedded" or "server" |
+| `QDRANT_PATH` | `./qdrant_db` | Path for embedded Qdrant database |
+| `QDRANT_HOST` | `localhost` | Qdrant server host (server mode) |
+| `QDRANT_PORT` | `6333` | Qdrant server port (server mode) |
+| `QDRANT_API_KEY` | `` | Qdrant API key (optional) |
+| `QDRANT_COLLECTION` | `documents` | Default collection name |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API endpoint |
+| `OLLAMA_MODEL` | `llama3.2` | LLM model name |
+| `LLM_TIMEOUT` | `60` | LLM request timeout (seconds) |
+| `LLM_MAX_RETRIES` | `3` | Max retries for LLM requests |
+| `MATRYOSHKA_MODEL` | `jinaai/jina-embeddings-v3` | Matryoshka embedding model |
+| `COLBERT_MODEL` | `colbert-ir/colbertv2.0` | ColBERT model |
+| `SPLADE_MODEL` | `naver/splade-v3` | SPLADE model |
+| `CROSS_ENCODER_MODEL` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Reranking model |
+| `DEVICE` | `cpu` | Device for embeddings (cpu/cuda/mps/auto) |
+| `API_HOST` | `0.0.0.0` | Server bind address |
+| `API_PORT` | `8000` | Server port |
+| `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Allowed CORS origins |
+| `USE_PREFETCH` | `true` | Enable multi-stage retrieval |
+| `ENABLE_CROSS_ENCODER` | `true` | Enable reranking |
+| `ENABLE_CONTEXTUAL_CHUNKING` | `true` | Add context to chunks |
+| `ENABLE_LATE_CHUNKING` | `true` | Use late chunking strategy |
+
+See `.env.template` for complete documentation.
 
 ### Frontend Environment Variables
 
@@ -389,7 +482,16 @@ rag_pipeline/
 - **Solution**: Use GPU if available: `EMBEDDING_DEVICE=cuda` (NVIDIA) or `EMBEDDING_DEVICE=mps` (Apple Silicon)
 
 **Problem**: Qdrant database errors
-- **Solution**: Delete `./qdrant_db` directory and restart backend to recreate
+- **Solution (Embedded mode)**: Delete `./qdrant_db` directory and restart backend to recreate
+- **Solution (Server mode)**: Verify Qdrant server is running: `curl http://localhost:6333/collections`
+- **Solution (Server mode)**: Check Docker container: `docker ps | grep qdrant`
+
+**Problem**: `Storage folder is already accessed by another instance`
+- **Solution**: Only one process can access embedded Qdrant at a time. Stop other instances or use server mode for concurrent access
+
+**Problem**: Qdrant connection refused (server mode)
+- **Solution**: Ensure Qdrant server is running: `docker start qdrant` or start Docker container
+- **Solution**: Check QDRANT_HOST and QDRANT_PORT in .env match your Qdrant server
 
 ### Frontend Issues
 
