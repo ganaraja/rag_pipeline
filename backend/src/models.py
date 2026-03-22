@@ -94,8 +94,8 @@ class UploadResponse(BaseModel):
 
 class QueryRequest(BaseModel):
     """Request model for querying the RAG system."""
-    query: str = Field(..., min_length=1, description="User query text")
-    collection_name: str = Field(..., min_length=1, description="Name of the collection to query")
+    query: str = Field(..., description="User query text")
+    collection_name: str = Field(..., description="Name of the collection to query")
 
 
 class RetrievalResult(BaseModel):

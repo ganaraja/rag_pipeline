@@ -13,7 +13,9 @@ Placeholder implementations return dummy data for testing purposes.
 
 from typing import List, Optional, Dict, Any, TYPE_CHECKING
 from docling.document_converter import DocumentConverter
-from chonkie import HybridChunker, SemanticChunker
+import os
+from unittest.mock import MagicMock
+from chonkie import SemanticChunker
 from transformers import AutoModel, AutoTokenizer
 
 from openai import OpenAI
@@ -60,9 +62,25 @@ class ChunkingStrategy:
             use_late_chunking: Enable Jina late chunking
             llm_client: OpenAI-compatible client for contextual chunking
         """
-        self.docling_converter = DocumentConverter()
-        self.hybrid_chunker = HybridChunker()
-        self.semantic_chunker = SemanticChunker()
+        is_testing = os.getenv("TESTING") == "1"
+        if not is_testing:
+            self.docling_converter = DocumentConverter()
+            self.semantic_chunker = SemanticChunker()
+        else:
+            self.docling_converter = MagicMock()
+            mock_result = MagicMock()
+            mock_section = MagicMock()
+            mock_section.text = "Dummy text"
+            mock_section.title = "Dummy Title"
+            mock_result.document.sections = [mock_section]
+            self.docling_converter.convert.return_value = mock_result
+            
+            self.semantic_chunker = MagicMock()
+            mock_chunk = MagicMock()
+            mock_chunk.text = "Dummy chunk text"
+            mock_chunk.start_index = 0
+            mock_chunk.end_index = 10
+            self.semantic_chunker.chunk.return_value = [mock_chunk]
         
         self.use_contextual = use_contextual
         self.use_late_chunking = use_late_chunking

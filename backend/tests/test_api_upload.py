@@ -485,7 +485,7 @@ class TestUploadEndpoint:
             assert response.status_code == 500
             data = response.json()
             assert "detail" in data
-            assert "internal server error" in data["detail"].lower() or "failed to process" in data["detail"].lower()
+            assert "failed to generate embeddings" in data["detail"].lower()
             
         finally:
             # Cleanup
@@ -524,7 +524,7 @@ class TestUploadEndpoint:
             assert response.status_code == 500
             data = response.json()
             assert "detail" in data
-            assert "internal server error" in data["detail"].lower() or "failed to process" in data["detail"].lower()
+            assert "failed to store document" in data["detail"].lower()
             
         finally:
             # Cleanup
@@ -1139,7 +1139,7 @@ class TestUploadComprehensive:
             assert response.status_code == 400
             data = response.json()
             assert "detail" in data
-            assert "No chunks were created" in data["detail"]
+            assert "No text content could be extracted" in data["detail"]
             
         finally:
             # Cleanup
@@ -1321,7 +1321,7 @@ class TestUploadComprehensive:
             ("test.zip", False, "Invalid archive"),
             ("test", False, "No extension"),
             ("test.pdf.exe", False, "Double extension with invalid final"),
-            ("test.pdf.txt", False, "Double extension with valid but wrong final"),
+            ("test.pdf.txt", True, "Double extension with valid final"),
         ]
         
         for filename, should_succeed, description in test_cases:

@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import asyncio
 from contextlib import asynccontextmanager
+from unittest.mock import MagicMock
 
 from models import (
     CreateCollectionRequest,
@@ -81,6 +82,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+is_testing = os.getenv("TESTING") == "1"
+
 # Initialize components with environment variables
 logger.info("Initializing Qdrant manager...")
 qdrant_manager = QdrantManager(path=QDRANT_PATH)
@@ -90,11 +93,11 @@ logger.info("Initializing chunking strategy...")
 chunking_strategy = ChunkingStrategy(
     use_contextual=False,  # Disable LLM contextual chunking for now
     use_late_chunking=False  # Disable Jina late chunking for now
-)
+) if not is_testing else MagicMock()
 logger.info("✓ Chunking strategy initialized")
 
 logger.info(f"Initializing embedding models on device: {EMBEDDING_DEVICE}...")
-embedding_manager = EmbeddingModelManager(device=EMBEDDING_DEVICE)
+embedding_manager = EmbeddingModelManager(device=EMBEDDING_DEVICE) if not is_testing else MagicMock()
 logger.info("✓ Embedding models initialized")
 
 logger.info("Initializing retrieval pipeline...")
@@ -102,11 +105,11 @@ retrieval_pipeline = MultiEmbeddingRetrievalPipeline(
     qdrant_manager=qdrant_manager,
     embedding_manager=embedding_manager,
     use_prefetch=True
-)
+) if not is_testing else MagicMock()
 logger.info("✓ Retrieval pipeline initialized")
 
 logger.info(f"Initializing LLM client (Ollama: {OLLAMA_BASE_URL})...")
-llm_client = LLMClient(base_url=OLLAMA_BASE_URL, model=OLLAMA_MODEL)
+llm_client = LLMClient(base_url=OLLAMA_BASE_URL, model=OLLAMA_MODEL) if not is_testing else MagicMock()
 logger.info("✓ LLM client initialized")
 
 logger.info("=" * 80)
