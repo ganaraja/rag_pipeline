@@ -12,14 +12,14 @@ Placeholder implementations return dummy data for testing purposes.
 """
 
 from typing import List, Optional, Dict, Any, TYPE_CHECKING
-# from docling.document_converter import DocumentConverter
-# from chonkie import HybridChunker, SemanticChunker
-# from transformers import AutoModel, AutoTokenizer
+from docling.document_converter import DocumentConverter
+from chonkie import HybridChunker, SemanticChunker
+from transformers import AutoModel, AutoTokenizer
 
-# NOTE: OpenAI import commented out for cross-platform compatibility
-# from openai import OpenAI
+from openai import OpenAI
 if TYPE_CHECKING:
-    from openai import OpenAI
+    pass
+
 
 from models import (
     DocumentChunk,
@@ -60,25 +60,23 @@ class ChunkingStrategy:
             use_late_chunking: Enable Jina late chunking
             llm_client: OpenAI-compatible client for contextual chunking
         """
-        # NOTE: Docling and Chonkie imports commented out for cross-platform compatibility
-        # self.docling_converter = DocumentConverter()
-        # self.hybrid_chunker = HybridChunker()
-        # self.semantic_chunker = SemanticChunker()
+        self.docling_converter = DocumentConverter()
+        self.hybrid_chunker = HybridChunker()
+        self.semantic_chunker = SemanticChunker()
         
         self.use_contextual = use_contextual
         self.use_late_chunking = use_late_chunking
         self.llm_client = llm_client
 
-        # NOTE: Jina model initialization commented out for cross-platform compatibility
-        # if use_late_chunking:
-        #     self.jina_model = AutoModel.from_pretrained(
-        #         "jinaai/jina-embeddings-v2-base-en",
-        #         trust_remote_code=True
-        #     )
-        #     self.jina_tokenizer = AutoTokenizer.from_pretrained(
-        #         "jinaai/jina-embeddings-v2-base-en",
-        #         trust_remote_code=True
-        #     )
+        if use_late_chunking:
+            self.jina_model = AutoModel.from_pretrained(
+                "jinaai/jina-embeddings-v2-base-en",
+                trust_remote_code=True
+            )
+            self.jina_tokenizer = AutoTokenizer.from_pretrained(
+                "jinaai/jina-embeddings-v2-base-en",
+                trust_remote_code=True
+            )
 
     def process_document(self, file_path: str) -> List[DocumentChunk]:
         """
@@ -137,30 +135,15 @@ class ChunkingStrategy:
 
         NOTE: Placeholder implementation - returns dummy data
         """
-        # NOTE: Actual Docling implementation would be:
-        # result = self.docling_converter.convert(file_path)
-        # parent_chunks = []
-        # for idx, section in enumerate(result.document.sections):
-        #     parent_chunks.append(ParentChunk(
-        #         id=idx,
-        #         text=section.text,
-        #         section_title=section.title
-        #     ))
-        # return parent_chunks
-
-        # Placeholder implementation
-        return [
-            ParentChunk(
-                id=0,
-                text="This is a sample parent chunk from section 1. It contains multiple sentences that will be further chunked.",
-                section_title="Introduction"
-            ),
-            ParentChunk(
-                id=1,
-                text="This is another parent chunk from section 2. It represents a different section of the document with its own content.",
-                section_title="Background"
-            )
-        ]
+        result = self.docling_converter.convert(file_path)
+        parent_chunks = []
+        for idx, section in enumerate(result.document.sections):
+            parent_chunks.append(ParentChunk(
+                id=idx,
+                text=section.text,
+                section_title=section.title
+            ))
+        return parent_chunks
 
     def _semantic_chunk(self, parent_chunks: List[ParentChunk]) -> List[SemanticChunk]:
         """
@@ -177,49 +160,19 @@ class ChunkingStrategy:
 
         NOTE: Placeholder implementation - returns dummy data
         """
-        # NOTE: Actual Chonkie implementation would be:
-        # semantic_chunks = []
-        # chunk_id = 0
-        # for parent in parent_chunks:
-        #     chunks = self.semantic_chunker.chunk(parent.text)
-        #     for chunk in chunks:
-        #         semantic_chunks.append(SemanticChunk(
-        #             id=chunk_id,
-        #             parent_id=parent.id,
-        #             text=chunk.text,
-        #             start_index=chunk.start_index,
-        #             end_index=chunk.end_index
-        #         ))
-        #         chunk_id += 1
-        # return semantic_chunks
-
-        # Placeholder implementation
         semantic_chunks = []
         chunk_id = 0
-        
         for parent in parent_chunks:
-            # Simulate splitting parent chunk into 2 semantic chunks
-            text = parent.text
-            mid_point = len(text) // 2
-            
-            semantic_chunks.append(SemanticChunk(
-                id=chunk_id,
-                parent_id=parent.id,
-                text=text[:mid_point],
-                start_index=0,
-                end_index=mid_point
-            ))
-            chunk_id += 1
-            
-            semantic_chunks.append(SemanticChunk(
-                id=chunk_id,
-                parent_id=parent.id,
-                text=text[mid_point:],
-                start_index=mid_point,
-                end_index=len(text)
-            ))
-            chunk_id += 1
-        
+            chunks = self.semantic_chunker.chunk(parent.text)
+            for chunk in chunks:
+                semantic_chunks.append(SemanticChunk(
+                    id=chunk_id,
+                    parent_id=parent.id,
+                    text=chunk.text,
+                    start_index=chunk.start_index,
+                    end_index=chunk.end_index
+                ))
+                chunk_id += 1
         return semantic_chunks
 
     def _contextual_chunk(self, semantic_chunks: List[SemanticChunk]) -> List[ContextualChunk]:
@@ -237,37 +190,26 @@ class ChunkingStrategy:
 
         NOTE: Placeholder implementation - returns dummy data
         """
-        # NOTE: Actual LLM-based contextual chunking would be:
-        # contextual_chunks = []
-        # for chunk in semantic_chunks:
-        #     parent_text = self._get_parent_text(chunk.parent_id)
-        #     prompt = f"Given the document section:\n{parent_text}\n\n"
-        #     prompt += f"Provide context for this chunk:\n{chunk.text}"
-        #     
-        #     response = self.llm_client.chat.completions.create(
-        #         model="gpt-4",
-        #         messages=[{"role": "user", "content": prompt}]
-        #     )
-        #     contextual_text = response.choices[0].message.content
-        #     
-        #     contextual_chunks.append(ContextualChunk(
-        #         semantic_chunk_id=chunk.id,
-        #         parent_id=chunk.parent_id,
-        #         semantic_chunk=chunk.text,
-        #         parent_chunk=parent_text,
-        #         contextual_chunk=contextual_text
-        #     ))
-        # return contextual_chunks
-
-        # Placeholder implementation
         contextual_chunks = []
         for chunk in semantic_chunks:
+            # In a real implementation this might fetch parent_text properly,
+            # but using chunk text as simple fallback if missing
+            parent_text = chunk.text  # or fetching parent chunk using parent.id if available
+            prompt = f"Given the document section:\n{parent_text}\n\n"
+            prompt += f"Provide context for this chunk:\n{chunk.text}"
+            
+            response = self.llm_client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            contextual_text = response.choices[0].message.content
+            
             contextual_chunks.append(ContextualChunk(
                 semantic_chunk_id=chunk.id,
                 parent_id=chunk.parent_id,
                 semantic_chunk=chunk.text,
-                parent_chunk=f"Parent context for chunk {chunk.id}",
-                contextual_chunk=f"[Context] {chunk.text}"
+                parent_chunk=parent_text,
+                contextual_chunk=contextual_text
             ))
         return contextual_chunks
 
@@ -286,53 +228,35 @@ class ChunkingStrategy:
 
         NOTE: Placeholder implementation - returns dummy data
         """
-        # NOTE: Actual Jina late chunking implementation would be:
-        # late_chunks = []
-        # chunk_id = 0
-        # for parent in parent_chunks:
-        #     # Tokenize and embed entire parent chunk
-        #     inputs = self.jina_tokenizer(
-        #         parent.text,
-        #         return_tensors="pt",
-        #         padding=True,
-        #         truncation=True
-        #     )
-        #     outputs = self.jina_model(**inputs)
-        #     embeddings = outputs.last_hidden_state
-        #     
-        #     # Split into chunks while preserving embeddings
-        #     tokens = inputs["input_ids"][0]
-        #     chunk_size = 128
-        #     for i in range(0, len(tokens), chunk_size):
-        #         chunk_tokens = tokens[i:i+chunk_size]
-        #         chunk_embeddings = embeddings[0, i:i+chunk_size, :].mean(dim=0)
-        #         chunk_text = self.jina_tokenizer.decode(chunk_tokens)
-        #         
-        #         late_chunks.append(LateChunk(
-        #             semantic_id=chunk_id,
-        #             parent_id=parent.id,
-        #             text=chunk_text,
-        #             embedding=chunk_embeddings.tolist(),
-        #             num_tokens=len(chunk_tokens)
-        #         ))
-        #         chunk_id += 1
-        # return late_chunks
-
-        # Placeholder implementation
         late_chunks = []
         chunk_id = 0
-        
         for parent in parent_chunks:
-            # Simulate creating late chunks with dummy embeddings
-            late_chunks.append(LateChunk(
-                semantic_id=chunk_id,
-                parent_id=parent.id,
-                text=parent.text,
-                embedding=[0.1] * 768,  # Dummy 768-dimensional embedding
-                num_tokens=len(parent.text.split())
-            ))
-            chunk_id += 1
-        
+            # Tokenize and embed entire parent chunk
+            inputs = self.jina_tokenizer(
+                parent.text,
+                return_tensors="pt",
+                padding=True,
+                truncation=True
+            )
+            outputs = self.jina_model(**inputs)
+            embeddings = outputs.last_hidden_state
+            
+            # Split into chunks while preserving embeddings
+            tokens = inputs["input_ids"][0]
+            chunk_size = 128
+            for i in range(0, len(tokens), chunk_size):
+                chunk_tokens = tokens[i:i+chunk_size]
+                chunk_embeddings = embeddings[0, i:i+chunk_size, :].mean(dim=0)
+                chunk_text = self.jina_tokenizer.decode(chunk_tokens)
+                
+                late_chunks.append(LateChunk(
+                    semantic_id=chunk_id,
+                    parent_id=parent.id,
+                    text=chunk_text,
+                    embedding=chunk_embeddings.tolist(),
+                    num_tokens=len(chunk_tokens)
+                ))
+                chunk_id += 1
         return late_chunks
 
     def _convert_semantic_to_document_chunks(

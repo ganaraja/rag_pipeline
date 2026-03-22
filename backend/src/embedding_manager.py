@@ -14,10 +14,9 @@ Uncomment these sections when running on a system with proper GPU/CPU support.
 from typing import List, Optional, Union
 import numpy as np
 
-# NOTE: Uncomment these imports when running on a system with torch support
-# import torch
-# from sentence_transformers import SentenceTransformer
-# from sentence_transformers.cross_encoder import CrossEncoder
+import torch
+from sentence_transformers import SentenceTransformer
+from sentence_transformers.cross_encoder import CrossEncoder
 
 from models import SparseVector
 
@@ -57,41 +56,31 @@ class EmbeddingModelManager:
         """
         self.device = self._select_device(device)
         
-        # NOTE: Model initialization is commented out for cross-platform compatibility
-        # Uncomment when running on a system with proper torch support
-        
         # Initialize Matryoshka models
-        # self.matryoshka_768_model = SentenceTransformer(
-        #     "tomaarsen/mpnet-base-nli-matryoshka"
-        # ).to(self.device)
+        self.matryoshka_768_model = SentenceTransformer(
+            "tomaarsen/mpnet-base-nli-matryoshka"
+        ).to(self.device)
         
-        # self.matryoshka_64_model = SentenceTransformer(
-        #     "tomaarsen/mpnet-base-nli-matryoshka",
-        #     truncate_dim=64
-        # ).to(self.device)
+        self.matryoshka_64_model = SentenceTransformer(
+            "tomaarsen/mpnet-base-nli-matryoshka",
+            truncate_dim=64
+        ).to(self.device)
         
         # Initialize ColBERT model for late interaction
         # NOTE: ColBERT requires special handling for multi-vector embeddings
-        # self.colbert_model = SentenceTransformer("colbert-ir/colbertv2.0")
-        # self.colbert_model.to(self.device)
+        self.colbert_model = SentenceTransformer("colbert-ir/colbertv2.0")
+        self.colbert_model.to(self.device)
         
         # Initialize SPLADE model for sparse embeddings
         # NOTE: SPLADE produces sparse vectors with term expansion
-        # self.splade_model = SentenceTransformer("prithivida/Splade_PP_en_v1")
-        # self.splade_model.to(self.device)
+        self.splade_model = SentenceTransformer("prithivida/Splade_PP_en_v1")
+        self.splade_model.to(self.device)
         
         # Initialize cross-encoder for reranking
-        # self.cross_encoder = CrossEncoder(
-        #     "cross-encoder/ms-marco-MiniLM-L6-v2",
-        #     device=self.device
-        # )
-        
-        # Placeholder: Store model references as None when commented out
-        self.matryoshka_768_model = None
-        self.matryoshka_64_model = None
-        self.colbert_model = None
-        self.splade_model = None
-        self.cross_encoder = None
+        self.cross_encoder = CrossEncoder(
+            "cross-encoder/ms-marco-MiniLM-L6-v2",
+            device=self.device
+        )
 
     def _select_device(self, device: str) -> str:
         """
@@ -107,25 +96,21 @@ class EmbeddingModelManager:
             ValueError: If requested device is not available
         """
         if device == "auto":
-            # NOTE: Uncomment when torch is available
-            # if torch.cuda.is_available():
-            #     return "cuda"
-            # elif torch.backends.mps.is_available():
-            #     return "mps"
-            # else:
-            #     return "cpu"
-            return "cpu"  # Default to CPU when torch is not available
+            if torch.cuda.is_available():
+                return "cuda"
+            elif torch.backends.mps.is_available():
+                return "mps"
+            else:
+                return "cpu"
         
         elif device == "cuda":
-            # NOTE: Uncomment when torch is available
-            # if not torch.cuda.is_available():
-            #     raise ValueError("CUDA device requested but not available")
+            if not torch.cuda.is_available():
+                raise ValueError("CUDA device requested but not available")
             return device
         
         elif device == "mps":
-            # NOTE: Uncomment when torch is available
-            # if not torch.backends.mps.is_available():
-            #     raise ValueError("MPS device requested but not available")
+            if not torch.backends.mps.is_available():
+                raise ValueError("MPS device requested but not available")
             return device
         
         elif device == "cpu":
@@ -170,17 +155,13 @@ class EmbeddingModelManager:
         if not texts:
             raise ValueError("texts cannot be empty")
         
-        # NOTE: Uncomment when models are initialized
-        # embeddings = self.matryoshka_64_model.encode(
-        #     texts,
-        #     batch_size=batch_size,
-        #     normalize_embeddings=normalize,
-        #     show_progress_bar=False
-        # )
-        # return embeddings
-        
-        # Placeholder: Return dummy embeddings for testing
-        return np.random.randn(len(texts), 64).astype(np.float32)
+        embeddings = self.matryoshka_64_model.encode(
+            texts,
+            batch_size=batch_size,
+            normalize_embeddings=normalize,
+            show_progress_bar=False
+        )
+        return embeddings
 
     def generate_matryoshka_768(
         self,
@@ -219,17 +200,13 @@ class EmbeddingModelManager:
         if not texts:
             raise ValueError("texts cannot be empty")
         
-        # NOTE: Uncomment when models are initialized
-        # embeddings = self.matryoshka_768_model.encode(
-        #     texts,
-        #     batch_size=batch_size,
-        #     normalize_embeddings=normalize,
-        #     show_progress_bar=False
-        # )
-        # return embeddings
-        
-        # Placeholder: Return dummy embeddings for testing
-        return np.random.randn(len(texts), 768).astype(np.float32)
+        embeddings = self.matryoshka_768_model.encode(
+            texts,
+            batch_size=batch_size,
+            normalize_embeddings=normalize,
+            show_progress_bar=False
+        )
+        return embeddings
 
     def generate_colbert(
         self,
@@ -270,33 +247,23 @@ class EmbeddingModelManager:
         if not texts:
             raise ValueError("texts cannot be empty")
         
-        # NOTE: Uncomment when models are initialized
         # ColBERT requires special encoding that produces token-level embeddings
-        # embeddings = []
-        # for i in range(0, len(texts), batch_size):
-        #     batch = texts[i:i + batch_size]
-        #     batch_embeddings = self.colbert_model.encode(
-        #         batch,
-        #         convert_to_tensor=True,
-        #         show_progress_bar=False
-        #     )
-        #     # ColBERT returns [batch_size, max_tokens, 128]
-        #     # Convert to list format for Qdrant
-        #     for text_embedding in batch_embeddings:
-        #         # Remove padding tokens (zeros)
-        #         non_zero_mask = torch.any(text_embedding != 0, dim=1)
-        #         filtered = text_embedding[non_zero_mask].cpu().numpy().tolist()
-        #         embeddings.append(filtered)
-        # return embeddings
-        
-        # Placeholder: Return dummy multi-vector embeddings
-        # Simulate 3-5 tokens per text with 128D vectors
-        result = []
-        for _ in texts:
-            num_tokens = np.random.randint(3, 6)
-            token_embeddings = np.random.randn(num_tokens, 128).astype(np.float32).tolist()
-            result.append(token_embeddings)
-        return result
+        embeddings = []
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            batch_embeddings = self.colbert_model.encode(
+                batch,
+                convert_to_tensor=True,
+                show_progress_bar=False
+            )
+            # ColBERT returns [batch_size, max_tokens, 128]
+            # Convert to list format for Qdrant
+            for text_embedding in batch_embeddings:
+                # Remove padding tokens (zeros)
+                non_zero_mask = torch.any(text_embedding != 0, dim=1)
+                filtered = text_embedding[non_zero_mask].cpu().numpy().tolist()
+                embeddings.append(filtered)
+        return embeddings
 
     def generate_splade(
         self,
@@ -335,38 +302,27 @@ class EmbeddingModelManager:
         if not texts:
             raise ValueError("texts cannot be empty")
         
-        # NOTE: Uncomment when models are initialized
         # SPLADE produces sparse vectors - need to extract non-zero indices/values
-        # embeddings = self.splade_model.encode(
-        #     texts,
-        #     batch_size=batch_size,
-        #     show_progress_bar=False,
-        #     convert_to_tensor=True
-        # )
-        # 
-        # sparse_vectors = []
-        # for embedding in embeddings:
-        #     # Get non-zero indices and values
-        #     non_zero_mask = embedding != 0
-        #     indices = torch.where(non_zero_mask)[0].cpu().numpy().tolist()
-        #     values = embedding[non_zero_mask].cpu().numpy().tolist()
-        #     
-        #     sparse_vectors.append(SparseVector(
-        #         indices=indices,
-        #         values=values
-        #     ))
-        # 
-        # return sparse_vectors
+        embeddings = self.splade_model.encode(
+            texts,
+            batch_size=batch_size,
+            show_progress_bar=False,
+            convert_to_tensor=True
+        )
         
-        # Placeholder: Return dummy sparse vectors
-        # Simulate 50-100 non-zero terms per text
-        result = []
-        for _ in texts:
-            num_terms = np.random.randint(50, 101)
-            indices = sorted(np.random.choice(30000, num_terms, replace=False).tolist())
-            values = np.random.exponential(0.5, num_terms).astype(np.float32).tolist()
-            result.append(SparseVector(indices=indices, values=values))
-        return result
+        sparse_vectors = []
+        for embedding in embeddings:
+            # Get non-zero indices and values
+            non_zero_mask = embedding != 0
+            indices = torch.where(non_zero_mask)[0].cpu().numpy().tolist()
+            values = embedding[non_zero_mask].cpu().numpy().tolist()
+            
+            sparse_vectors.append(SparseVector(
+                indices=indices,
+                values=values
+            ))
+        
+        return sparse_vectors
 
     def rerank(
         self,
@@ -407,22 +363,17 @@ class EmbeddingModelManager:
         if not candidates:
             raise ValueError("candidates cannot be empty")
         
-        # NOTE: Uncomment when models are initialized
-        # # Create query-candidate pairs
-        # pairs = [[query, candidate] for candidate in candidates]
-        # 
-        # # Get relevance scores
-        # scores = self.cross_encoder.predict(
-        #     pairs,
-        #     batch_size=batch_size,
-        #     show_progress_bar=False
-        # )
-        # 
-        # return scores.tolist()
+        # Create query-candidate pairs
+        pairs = [[query, candidate] for candidate in candidates]
         
-        # Placeholder: Return dummy scores
-        # Simulate relevance scores between -5 and 5
-        return np.random.randn(len(candidates)).astype(np.float32).tolist()
+        # Get relevance scores
+        scores = self.cross_encoder.predict(
+            pairs,
+            batch_size=batch_size,
+            show_progress_bar=False
+        )
+        
+        return scores.tolist()
 
     def generate_all_embeddings(
         self,

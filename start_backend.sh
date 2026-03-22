@@ -6,29 +6,28 @@ echo "RAG Backend Server - Startup Script"
 echo "=========================================="
 
 # Check if .env file exists
-if [ -f "backend/.env" ]; then
-    echo "✓ Loading environment variables from backend/.env"
-    export $(cat backend/.env | grep -v '^#' | xargs)
+if [ -f ".env" ]; then
+    echo "✓ Loading environment variables from .env"
+    export $(cat .env | grep -v '^#' | xargs)
 else
-    echo "⚠ No backend/.env file found, using defaults"
-    echo "  (Copy backend/.env.example to backend/.env to customize)"
+    echo "⚠ No .env file found, using defaults"
+    echo "  (Copy .env.template to .env to customize)"
 fi
 
-# Check if Ollama is running
+# Check if Ollama is running (warn but don't exit - backend can start without it)
 echo ""
 echo "Checking Ollama server..."
 if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
     echo "✓ Ollama is running"
 else
-    echo "✗ Ollama is not running!"
-    echo "  Please start Ollama first: ollama serve"
-    exit 1
+    echo "⚠ Ollama is not running - LLM queries will fail"
+    echo "  Start Ollama with: ollama serve"
 fi
 
 # Check if dependencies are installed
 echo ""
 echo "Checking Python dependencies..."
-if python3 -c "import fastapi" 2>/dev/null; then
+if uv run python -c "import fastapi" 2>/dev/null; then
     echo "✓ Dependencies installed"
 else
     echo "✗ Dependencies not installed!"
@@ -39,5 +38,7 @@ fi
 # Start the backend server
 echo ""
 echo "Starting backend server..."
+echo "  API:  http://localhost:8000"
+echo "  Docs: http://localhost:8000/docs"
 echo "=========================================="
-cd backend && python3 -m src.main
+cd backend && PYTHONPATH=src uv run python src/main.py
