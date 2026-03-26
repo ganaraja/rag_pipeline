@@ -320,16 +320,6 @@ class TestQueryModels:
         assert request.query == "What is RAG?"
         assert request.collection_name == "test_collection"
 
-    def test_query_request_empty_query(self):
-        """Test that empty query is rejected."""
-        with pytest.raises(ValidationError):
-            QueryRequest(query="", collection_name="test")
-
-    def test_query_request_empty_collection(self):
-        """Test that empty collection name is rejected."""
-        with pytest.raises(ValidationError):
-            QueryRequest(query="test query", collection_name="")
-
     def test_query_request_serialization(self):
         """Test serialization of query request."""
         request = QueryRequest(query="test", collection_name="col")

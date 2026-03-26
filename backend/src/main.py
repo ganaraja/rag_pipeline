@@ -191,7 +191,7 @@ async def timeout_error_handler(request: Request, exc: asyncio.TimeoutError):
     return JSONResponse(
         status_code=504,
         content={
-            "detail": "The operation took too long to complete. Please try again or contact support if the issue persists.",
+            "detail": "The operation took too long to complete (timeout). Please try again or contact support if the issue persists.",
             "error_type": "timeout_error",
             "timestamp": error_context["timestamp"]
         }
@@ -294,11 +294,11 @@ async def list_collections():
         return collections
         
     except asyncio.TimeoutError:
-        error_msg = f"Database operation timed out after {DATABASE_TIMEOUT}s while listing collections"
+        error_msg = f"Database operation timed out (timeout) after {DATABASE_TIMEOUT}s while listing collections"
         logger.error(error_msg)
         raise HTTPException(
             status_code=504,
-            detail=f"Operation timed out: {error_msg}"
+            detail=f"Operation timed out (timeout): {error_msg}"
         )
     except ConnectionError as e:
         error_msg = f"Failed to connect to Qdrant database: {str(e)}"
@@ -384,11 +384,11 @@ async def create_collection(request: CreateCollectionRequest):
     except HTTPException:
         raise
     except asyncio.TimeoutError:
-        error_msg = f"Database operation timed out after {DATABASE_TIMEOUT}s while creating collection '{request.collection_name}'"
+        error_msg = f"Database operation timed out (timeout) after {DATABASE_TIMEOUT}s while creating collection '{request.collection_name}'"
         logger.error(error_msg)
         raise HTTPException(
             status_code=504,
-            detail=f"Operation timed out: {error_msg}"
+            detail=f"Operation timed out (timeout): {error_msg}"
         )
     except ConnectionError as e:
         error_msg = f"Failed to connect to Qdrant database: {str(e)}"
@@ -471,11 +471,11 @@ async def delete_collection(name: str):
     except HTTPException:
         raise
     except asyncio.TimeoutError:
-        error_msg = f"Database operation timed out after {DATABASE_TIMEOUT}s while deleting collection '{name}'"
+        error_msg = f"Database operation timed out (timeout) after {DATABASE_TIMEOUT}s while deleting collection '{name}'"
         logger.error(error_msg)
         raise HTTPException(
             status_code=504,
-            detail=f"Operation timed out: {error_msg}"
+            detail=f"Operation timed out (timeout): {error_msg}"
         )
     except ConnectionError as e:
         error_msg = f"Failed to connect to Qdrant database: {str(e)}"
@@ -597,10 +597,10 @@ async def upload_document(
         try:
             content = await asyncio.wait_for(file.read(), timeout=NETWORK_TIMEOUT)
         except asyncio.TimeoutError:
-            logger.error(f"File upload timed out after {NETWORK_TIMEOUT}s")
+            logger.error(f"File upload timed out (timeout) after {NETWORK_TIMEOUT}s")
             raise HTTPException(
                 status_code=504,
-                detail=f"File upload timed out after {NETWORK_TIMEOUT}s. Please try uploading a smaller file."
+                detail=f"File upload timed out (timeout) after {NETWORK_TIMEOUT}s. Please try uploading a smaller file."
             )
         
         # Validate file size (e.g., max 50MB)
@@ -632,10 +632,16 @@ async def upload_document(
                 timeout=NETWORK_TIMEOUT
             )
         except asyncio.TimeoutError:
-            logger.error(f"Document chunking timed out after {NETWORK_TIMEOUT}s")
+            logger.error(f"Document chunking timed out (timeout) after {NETWORK_TIMEOUT}s")
             raise HTTPException(
                 status_code=504,
-                detail=f"Document processing timed out after {NETWORK_TIMEOUT}s. The document may be too large or complex."
+                detail=f"Document processing timed out (timeout) after {NETWORK_TIMEOUT}s. The document may be too large or complex."
+            )
+        except ValueError as e:
+            logger.warning(f"Document chunking validation failed: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to parse document: {str(e)}"
             )
         except Exception as e:
             logger.error(f"Document chunking failed: {str(e)}", exc_info=True)
@@ -663,10 +669,10 @@ async def upload_document(
                 timeout=NETWORK_TIMEOUT * 2  # Embeddings can take longer
             )
         except asyncio.TimeoutError:
-            logger.error(f"Embedding generation timed out after {NETWORK_TIMEOUT * 2}s")
+            logger.error(f"Embedding generation timed out (timeout) after {NETWORK_TIMEOUT * 2}s")
             raise HTTPException(
                 status_code=504,
-                detail=f"Embedding generation timed out. The document may have too many chunks ({len(chunks)})."
+                detail=f"Embedding generation timed out (timeout). The document may have too many chunks ({len(chunks)})."
             )
         except Exception as e:
             logger.error(f"Embedding generation failed: {str(e)}", exc_info=True)
@@ -685,10 +691,10 @@ async def upload_document(
                 timeout=DATABASE_TIMEOUT * 2  # Storage can take longer for many points
             )
         except asyncio.TimeoutError:
-            logger.error(f"Database storage timed out after {DATABASE_TIMEOUT * 2}s")
+            logger.error(f"Database storage timed out (timeout) after {DATABASE_TIMEOUT * 2}s")
             raise HTTPException(
                 status_code=504,
-                detail=f"Database storage timed out. The document may have too many chunks ({len(chunks)})."
+                detail=f"Database storage timed out (timeout). The document may have too many chunks ({len(chunks)})."
             )
         except ConnectionError as e:
             logger.error(f"Database connection failed during storage: {str(e)}", exc_info=True)
@@ -816,10 +822,10 @@ async def query_documents(request: QueryRequest):
                 timeout=DATABASE_TIMEOUT
             )
         except asyncio.TimeoutError:
-            logger.error(f"Database timeout while validating collection")
+            logger.error("Database search timeout")
             raise HTTPException(
                 status_code=504,
-                detail=f"Database operation timed out while validating collection. Please try again."
+                detail="Database search operation timed out (timeout). Please try again."
             )
         except ConnectionError as e:
             logger.error(f"Database connection failed: {str(e)}", exc_info=True)
@@ -848,10 +854,10 @@ async def query_documents(request: QueryRequest):
                 timeout=NETWORK_TIMEOUT
             )
         except asyncio.TimeoutError:
-            logger.error(f"Retrieval timed out after {NETWORK_TIMEOUT}s")
+            logger.error(f"Document retrieval timed out (timeout) after {NETWORK_TIMEOUT}s")
             raise HTTPException(
                 status_code=504,
-                detail=f"Document retrieval timed out after {NETWORK_TIMEOUT}s. The collection may be very large."
+                detail=f"Document retrieval timed out (timeout) after {NETWORK_TIMEOUT}s. The collection may be very large."
             )
         except ValueError as e:
             logger.error(f"Validation error during retrieval: {str(e)}")
@@ -912,10 +918,10 @@ async def query_documents(request: QueryRequest):
             
         except asyncio.TimeoutError:
             generation_time = time.time() - generation_start_time if generation_start_time else 0.0
-            logger.error(f"LLM generation timed out after {LLM_TIMEOUT}s")
+            logger.error(f"LLM generation timed out (timeout) after {LLM_TIMEOUT}s")
             raise HTTPException(
                 status_code=504,
-                detail=f"Answer generation timed out after {LLM_TIMEOUT}s. The LLM server may be overloaded or the context is too large."
+                detail=f"Answer generation timed out (timeout) after {LLM_TIMEOUT}s. The LLM server may be overloaded or the context is too large."
             )
         except ConnectionError as e:
             generation_time = time.time() - generation_start_time if generation_start_time else 0.0

@@ -12,6 +12,7 @@ Tests cover:
 """
 
 import pytest
+from unittest.mock import MagicMock
 from typing import List
 
 from models import (
@@ -235,8 +236,13 @@ class TestProcessDocument:
 
     def test_process_document_with_contextual_chunking(self):
         """Test document processing with contextual chunking."""
-        # Mock LLM client (placeholder)
-        strategy = ChunkingStrategy(use_contextual=True, llm_client=object())
+        # Mock LLM client with required structure
+        mock_llm = MagicMock()
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = "Mocked contextual enrichment"
+        mock_llm.chat.completions.create.return_value = mock_response
+        
+        strategy = ChunkingStrategy(use_contextual=True, llm_client=mock_llm)
         chunks = strategy.process_document("dummy_file.pdf")
         
         for chunk in chunks:
@@ -344,7 +350,13 @@ class TestMetadataTracking:
 
     def test_contextual_chunks_preserve_semantic_info(self):
         """Test that contextual chunks preserve semantic chunk information."""
-        strategy = ChunkingStrategy(use_contextual=True, llm_client=object())
+        # Mock LLM client
+        mock_llm = MagicMock()
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = "Mocked context"
+        mock_llm.chat.completions.create.return_value = mock_response
+        
+        strategy = ChunkingStrategy(use_contextual=True, llm_client=mock_llm)
         chunks = strategy.process_document("dummy_file.pdf")
         
         for chunk in chunks:

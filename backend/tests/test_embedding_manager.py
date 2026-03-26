@@ -344,17 +344,25 @@ class TestDeviceSelection:
 
     def test_cuda_device_selection(self):
         """Test CUDA device selection (may not be available)."""
-        # This test will pass even if CUDA is not available
-        # because we commented out the availability check
-        manager = EmbeddingModelManager(device="cuda")
-        assert manager.device == "cuda"
+        import torch
+        if torch.cuda.is_available():
+            manager = EmbeddingModelManager(device="cuda")
+            assert manager.device == "cuda"
+        else:
+            with pytest.raises(ValueError, match="CUDA device requested but not available"):
+                EmbeddingModelManager(device="cuda")
 
     def test_mps_device_selection(self):
         """Test MPS device selection (may not be available)."""
-        # This test will pass even if MPS is not available
-        # because we commented out the availability check
-        manager = EmbeddingModelManager(device="mps")
-        assert manager.device == "mps"
+        import torch
+        # Check for MPS availability (PyTorch 1.12+)
+        mps_available = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+        if mps_available:
+            manager = EmbeddingModelManager(device="mps")
+            assert manager.device == "mps"
+        else:
+            with pytest.raises(ValueError, match="MPS device requested but not available"):
+                EmbeddingModelManager(device="mps")
 
 
 class TestEdgeCases:

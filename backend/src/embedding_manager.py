@@ -256,13 +256,23 @@ class EmbeddingModelManager:
                 convert_to_tensor=True,
                 show_progress_bar=False
             )
-            # ColBERT returns [batch_size, max_tokens, 128]
+            # ColBERT returns [batch_size, max_tokens, 128] or [batch_size, 128]
             # Convert to list format for Qdrant
             for text_embedding in batch_embeddings:
-                # Remove padding tokens (zeros)
-                non_zero_mask = torch.any(text_embedding != 0, dim=1)
-                filtered = text_embedding[non_zero_mask].cpu().numpy().tolist()
-                embeddings.append(filtered)
+                # Remove padding tokens (zeros) if multi-vector, else just add the vector
+                if text_embedding.ndim > 1:
+                    non_zero_mask = torch.any(text_embedding != 0, dim=1)
+                    filtered = text_embedding[non_zero_mask]
+                    # Project/Slice to 128 if needed
+                    if filtered.shape[-1] > 128:
+                        filtered = filtered[:, :128]
+                    embeddings.append(filtered.cpu().numpy().tolist())
+                else:
+                    # Single vector case
+                    vector = text_embedding
+                    if vector.shape[-1] > 128:
+                        vector = vector[:128]
+                    embeddings.append([vector.cpu().numpy().tolist()])
         return embeddings
 
     def generate_splade(

@@ -23,6 +23,7 @@ const config: Config = {
   },
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '^.*/config/api.config$': '<rootDir>/tests/__mocks__/api.config.ts'
   },
 };
 
