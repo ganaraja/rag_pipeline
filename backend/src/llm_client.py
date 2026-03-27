@@ -12,8 +12,7 @@ from typing import List, Optional
 import time
 import os
 
-# NOTE: Uncomment these imports when running with Ollama server
-# from openai import OpenAI, OpenAIError, APIConnectionError, APITimeoutError
+from openai import OpenAI
 
 
 class LLMConnectionError(Exception):
@@ -44,7 +43,7 @@ class LLMClient:
         model: Name of the LLM model to use
         timeout: Request timeout in seconds
         max_retries: Maximum number of retry attempts for transient failures
-        client: OpenAI client instance (None when commented out)
+        client: OpenAI client instance
     """
 
     def __init__(
@@ -87,16 +86,12 @@ class LLMClient:
         if max_retries < 0:
             raise ValueError("max_retries cannot be negative")
 
-        # NOTE: Uncomment when OpenAI client is available
         # Initialize OpenAI client configured for Ollama
-        # self.client = OpenAI(
-        #     base_url=self.base_url,
-        #     api_key="ollama",  # Ollama doesn't require real API key
-        #     timeout=self.timeout
-        # )
-
-        # Placeholder: Store client as None when commented out
-        self.client = None
+        self.client = OpenAI(
+            base_url=self.base_url,
+            api_key="ollama",  # Ollama doesn't require real API key
+            timeout=self.timeout
+        )
 
     def generate_answer(
         self,

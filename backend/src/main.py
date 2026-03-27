@@ -8,6 +8,7 @@ document upload, and query operations.
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from dotenv import load_dotenv
 from typing import List, Optional
 import logging
 import time
@@ -33,8 +34,18 @@ from embedding_manager import EmbeddingModelManager
 from retrieval_pipeline import MultiEmbeddingRetrievalPipeline
 from llm_client import LLMClient
 
+# Load environment variables
+load_dotenv()
+
 # Environment variable configuration
+# Environment variable configuration
+QDRANT_MODE = os.getenv("QDRANT_MODE", "embedded").lower()
 QDRANT_PATH = os.getenv("QDRANT_PATH", "./qdrant_db")
+QDRANT_URL = os.getenv("QDRANT_URL")
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
+
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
 EMBEDDING_DEVICE = os.getenv("EMBEDDING_DEVICE", "cpu")
@@ -53,7 +64,14 @@ logger = logging.getLogger(__name__)
 logger.info("=" * 80)
 logger.info("RAG Full-Stack Application - Backend Server Starting")
 logger.info("=" * 80)
-logger.info(f"Qdrant Path: {QDRANT_PATH}")
+logger.info(f"Qdrant Mode: {QDRANT_MODE}")
+if QDRANT_MODE == "server":
+    if QDRANT_URL:
+        logger.info(f"Qdrant Server URL: {QDRANT_URL}")
+    else:
+        logger.info(f"Qdrant Server: {QDRANT_HOST}:{QDRANT_PORT}")
+else:
+    logger.info(f"Qdrant Path: {QDRANT_PATH}")
 logger.info(f"Ollama Base URL: {OLLAMA_BASE_URL}")
 logger.info(f"Ollama Model: {OLLAMA_MODEL}")
 logger.info(f"Embedding Device: {EMBEDDING_DEVICE}")
@@ -85,8 +103,15 @@ app.add_middleware(
 is_testing = os.getenv("TESTING") == "1"
 
 # Initialize components with environment variables
-logger.info("Initializing Qdrant manager...")
-qdrant_manager = QdrantManager(path=QDRANT_PATH)
+logger.info(f"Initializing Qdrant manager ({QDRANT_MODE} mode)...")
+qdrant_manager = QdrantManager(
+    mode=QDRANT_MODE,
+    path=QDRANT_PATH,
+    host=QDRANT_HOST,
+    port=QDRANT_PORT,
+    url=QDRANT_URL,
+    api_key=QDRANT_API_KEY if QDRANT_API_KEY else None
+)
 logger.info("✓ Qdrant manager initialized")
 
 logger.info("Initializing chunking strategy...")

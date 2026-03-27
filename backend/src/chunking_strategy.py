@@ -140,27 +140,44 @@ class ChunkingStrategy:
 
     def _parse_with_docling(self, file_path: str) -> List[ParentChunk]:
         """
-        Extract parent chunks by section using Docling.
-
-        Docling parses the document structure and extracts sections as parent chunks.
-        Each parent chunk represents a logical section of the document.
+        Extract parent chunks using Docling.
 
         Args:
             file_path: Path to document file
 
         Returns:
             List of ParentChunk objects
-
-        NOTE: Placeholder implementation - returns dummy data
         """
         result = self.docling_converter.convert(file_path)
+        
+        # In newer docling versions, we can use export_to_markdown() 
+        # to get the structured content then split into sections.
+        markdown_text = result.document.export_to_markdown()
+        
+        # Simple heuristic: split by major headers or just use as one chunk if small
+        sections = markdown_text.split("\n# ")
         parent_chunks = []
-        for idx, section in enumerate(result.document.sections):
+        
+        for idx, section_text in enumerate(sections):
+            if not section_text.strip():
+                continue
+                
+            title = None
+            if idx > 0:
+                # First line of split (after #) is the title
+                lines = section_text.split("\n", 1)
+                title = lines[0].strip()
+                content = lines[1] if len(lines) > 1 else ""
+                section_text = f"# {section_text}" # Restore header for content
+            else:
+                content = section_text
+                
             parent_chunks.append(ParentChunk(
                 id=idx,
-                text=section.text,
-                section_title=section.title
+                text=section_text.strip(),
+                section_title=title
             ))
+            
         return parent_chunks
 
     def _semantic_chunk(self, parent_chunks: List[ParentChunk]) -> List[SemanticChunk]:

@@ -86,7 +86,7 @@ const handleAPIError = (error: unknown): never => {
  */
 export const listCollections = async (): Promise<string[]> => {
   try {
-    const response = await apiClient.get<string[]>('/api/collections');
+    const response = await apiClient.get<string[]>('/collections');
     return response.data;
   } catch (error) {
     return handleAPIError(error);
@@ -109,7 +109,7 @@ export const createCollection = async (
     };
     
     const response = await apiClient.post<CreateCollectionResponse>(
-      '/api/collections',
+      '/collections',
       request
     );
     
@@ -131,7 +131,7 @@ export const deleteCollection = async (
 ): Promise<DeleteCollectionResponse> => {
   try {
     const response = await apiClient.delete<DeleteCollectionResponse>(
-      `/api/collections/${encodeURIComponent(collectionName)}`
+      `/collections/${encodeURIComponent(collectionName)}`
     );
     
     return response.data;
@@ -158,7 +158,7 @@ export const uploadDocument = async (
     formData.append('collection_name', collectionName);
     
     const response = await apiClient.post<UploadResponse>(
-      '/api/upload',
+      '/upload',
       formData,
       {
         headers: {
@@ -193,7 +193,7 @@ export const queryDocuments = async (
     };
     
     const response = await apiClient.post<QueryResponse>(
-      '/api/query',
+      '/query',
       request,
       {
         timeout: API_CONFIG.queryTimeout,

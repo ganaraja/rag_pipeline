@@ -37,14 +37,33 @@ class QdrantManager:
     - Multi-stage retrieval with prefetch
     """
 
-    def __init__(self, path: str = "./qdrant_db"):
+    def __init__(
+        self,
+        mode: str = "embedded",
+        path: Optional[str] = "./qdrant_db",
+        host: Optional[str] = None,
+        port: Optional[int] = None,
+        url: Optional[str] = None,
+        api_key: Optional[str] = None
+    ):
         """
         Initialize Qdrant client.
 
         Args:
-            path: Path to Qdrant database directory
+            mode: "embedded" or "server"
+            path: Path for embedded mode
+            host: Host for server mode
+            port: Port for server mode
+            url: Full URL for server mode (alternative to host/port)
+            api_key: Optional API key for server mode
         """
-        self.client = QdrantClient(path=path)
+        if mode == "server":
+            if url:
+                self.client = QdrantClient(url=url, api_key=api_key)
+            else:
+                self.client = QdrantClient(host=host, port=port, api_key=api_key)
+        else:
+            self.client = QdrantClient(path=path)
 
     def create_collection(self, collection_name: str) -> None:
         """
