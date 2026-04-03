@@ -619,14 +619,7 @@ async def upload_document(
         logger.info(f"Saving file to temporary location: {temp_file_path}")
         
         # Read file content with size validation
-        try:
-            content = await asyncio.wait_for(file.read(), timeout=NETWORK_TIMEOUT)
-        except asyncio.TimeoutError:
-            logger.error(f"File upload timed out (timeout) after {NETWORK_TIMEOUT}s")
-            raise HTTPException(
-                status_code=504,
-                detail=f"File upload timed out (timeout) after {NETWORK_TIMEOUT}s. Please try uploading a smaller file."
-            )
+        content = await file.read()
         
         # Validate file size (e.g., max 50MB)
         max_size = 50 * 1024 * 1024  # 50MB
@@ -652,16 +645,7 @@ async def upload_document(
         # Step 4: Parse document with ChunkingStrategy
         logger.info("Starting document chunking...")
         try:
-            chunks = await asyncio.wait_for(
-                asyncio.to_thread(chunking_strategy.process_document, temp_file_path),
-                timeout=NETWORK_TIMEOUT
-            )
-        except asyncio.TimeoutError:
-            logger.error(f"Document chunking timed out (timeout) after {NETWORK_TIMEOUT}s")
-            raise HTTPException(
-                status_code=504,
-                detail=f"Document processing timed out (timeout) after {NETWORK_TIMEOUT}s. The document may be too large or complex."
-            )
+            chunks = await asyncio.to_thread(chunking_strategy.process_document, temp_file_path)
         except ValueError as e:
             logger.warning(f"Document chunking validation failed: {str(e)}")
             raise HTTPException(
@@ -689,16 +673,7 @@ async def upload_document(
         chunk_texts = [chunk.text for chunk in chunks]
         
         try:
-            embeddings = await asyncio.wait_for(
-                asyncio.to_thread(embedding_manager.generate_all_embeddings, chunk_texts),
-                timeout=NETWORK_TIMEOUT * 2  # Embeddings can take longer
-            )
-        except asyncio.TimeoutError:
-            logger.error(f"Embedding generation timed out (timeout) after {NETWORK_TIMEOUT * 2}s")
-            raise HTTPException(
-                status_code=504,
-                detail=f"Embedding generation timed out (timeout). The document may have too many chunks ({len(chunks)})."
-            )
+            embeddings = await asyncio.to_thread(embedding_manager.generate_all_embeddings, chunk_texts)
         except Exception as e:
             logger.error(f"Embedding generation failed: {str(e)}", exc_info=True)
             raise HTTPException(
@@ -711,16 +686,7 @@ async def upload_document(
         # Step 6: Store points in Qdrant
         logger.info(f"Storing {len(chunks)} points in Qdrant collection '{collection_name}'...")
         try:
-            await asyncio.wait_for(
-                asyncio.to_thread(qdrant_manager.store_points, collection_name, chunks, embeddings),
-                timeout=DATABASE_TIMEOUT * 2  # Storage can take longer for many points
-            )
-        except asyncio.TimeoutError:
-            logger.error(f"Database storage timed out (timeout) after {DATABASE_TIMEOUT * 2}s")
-            raise HTTPException(
-                status_code=504,
-                detail=f"Database storage timed out (timeout). The document may have too many chunks ({len(chunks)})."
-            )
+            await asyncio.to_thread(qdrant_manager.store_points, collection_name, chunks, embeddings)
         except ConnectionError as e:
             logger.error(f"Database connection failed during storage: {str(e)}", exc_info=True)
             raise HTTPException(
