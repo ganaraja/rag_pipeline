@@ -485,7 +485,7 @@ class TestUploadEndpoint:
             assert response.status_code == 500
             data = response.json()
             assert "detail" in data
-            assert "failed to generate embeddings" in data["detail"].lower()
+            assert "failed during batch 1" in data["detail"].lower()
             
         finally:
             # Cleanup
@@ -524,7 +524,7 @@ class TestUploadEndpoint:
             assert response.status_code == 500
             data = response.json()
             assert "detail" in data
-            assert "failed to store document" in data["detail"].lower()
+            assert "failed during batch 1" in data["detail"].lower()
             
         finally:
             # Cleanup
@@ -1097,8 +1097,7 @@ class TestUploadValidation:
         # Check message format
         assert "test_document.pdf" in data["message"]
         assert "3" in data["message"]  # Number of chunks
-        assert "Successfully uploaded and processed" in data["message"]
-        assert "Created" in data["message"]
+        assert "Successfully uploaded" in data["message"]
         assert "chunks" in data["message"]
 
 

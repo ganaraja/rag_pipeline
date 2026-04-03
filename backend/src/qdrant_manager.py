@@ -23,7 +23,12 @@ from qdrant_client.models import (
     Prefetch,
     QueryRequest,
     Query,
+    Filter,
+    FieldCondition,
+    MatchValue,
 )
+import uuid
+from typing import Set
 from models import DocumentChunk, SparseVector
 
 
@@ -145,6 +150,50 @@ class QdrantManager:
 
         self.client.delete_collection(collection_name=collection_name)
 
+    def get_existing_chunk_ids(self, collection_name: str, document_id: str) -> Set[int]:
+        """
+        Get all chunk IDs that have already been processed for a document.
+
+        Args:
+            collection_name: Target collection
+            document_id: Unique document identifier
+
+        Returns:
+            Set of integer chunk IDs
+        """
+        collections = self.list_collections()
+        if collection_name not in collections:
+            return set()
+
+        existing_ids = set()
+        offset = None
+        
+        while True:
+            result, offset = self.client.scroll(
+                collection_name=collection_name,
+                scroll_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="metadata.document_id",
+                            match=MatchValue(value=document_id)
+                        )
+                    ]
+                ),
+                limit=1000,
+                with_payload=["chunk_id"],
+                with_vectors=False,
+                offset=offset
+            )
+            
+            for point in result:
+                if point.payload and "chunk_id" in point.payload:
+                    existing_ids.add(point.payload["chunk_id"])
+                    
+            if offset is None:
+                break
+                
+        return existing_ids
+
     def store_points(
         self,
         collection_name: str,
@@ -187,9 +236,15 @@ class QdrantManager:
                 indices=splade_embedding.indices,
                 values=splade_embedding.values
             )
+            
+            document_id = chunk.metadata.get("document_id", "")
+            if document_id:
+                point_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"{document_id}_{chunk.chunk_id}"))
+            else:
+                point_id = str(uuid.uuid4())
 
             point = PointStruct(
-                id=chunk.chunk_id,
+                id=point_id,
                 vector={
                     "matryoshka_64": embeddings["matryoshka_64"][idx],
                     "matryoshka_768": embeddings["matryoshka_768"][idx],

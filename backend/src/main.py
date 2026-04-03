@@ -5,18 +5,20 @@ This module provides the REST API endpoints for collection management,
 document upload, and query operations.
 """
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Response, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from dotenv import load_dotenv
-from typing import List, Optional
 import logging
+from datetime import datetime, timezone
 import time
 import os
-import tempfile
-from datetime import datetime, timezone
-from pathlib import Path
+import uuid
+import hashlib
 import asyncio
+from pathlib import Path
+import tempfile
+from dotenv import load_dotenv
+from typing import List, Optional
 from contextlib import asynccontextmanager
 from unittest.mock import MagicMock
 
@@ -668,39 +670,72 @@ async def upload_document(
                 detail="Document processing failed: No text content could be extracted from the file. Please ensure the file contains readable text."
             )
         
-        # Step 5: Generate all embeddings
-        logger.info(f"Generating embeddings for {len(chunks)} chunks...")
-        chunk_texts = [chunk.text for chunk in chunks]
+        # Step 5: Generate embeddings and store in batches
+        import hashlib
+        doc_hash = hashlib.md5(f"{file.filename}_{len(content)}".encode() + content).hexdigest()
         
-        try:
-            embeddings = await asyncio.to_thread(embedding_manager.generate_all_embeddings, chunk_texts)
-        except Exception as e:
-            logger.error(f"Embedding generation failed: {str(e)}", exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to generate embeddings: {str(e)}. This may be due to GPU/CPU resource constraints."
+        for c in chunks:
+            c.metadata["document_id"] = doc_hash
+            
+        logger.info("Checking for already processed chunks in Qdrant...")
+        existing_ids = await asyncio.to_thread(
+            qdrant_manager.get_existing_chunk_ids, collection_name, doc_hash
+        )
+        
+        remaining_chunks = [c for c in chunks if c.chunk_id not in existing_ids]
+        
+        if existing_ids:
+            logger.info(
+                f"Resuming upload: Found {len(existing_ids)} already processed chunks. "
+                f"Processing {len(remaining_chunks)} remaining chunks."
             )
-        
-        logger.info(f"Generated embeddings for {len(chunks)} chunks")
-        
-        # Step 6: Store points in Qdrant
-        logger.info(f"Storing {len(chunks)} points in Qdrant collection '{collection_name}'...")
-        try:
-            await asyncio.to_thread(qdrant_manager.store_points, collection_name, chunks, embeddings)
-        except ConnectionError as e:
-            logger.error(f"Database connection failed during storage: {str(e)}", exc_info=True)
-            raise HTTPException(
-                status_code=503,
-                detail=f"Failed to connect to database during storage: {str(e)}"
+            
+        if not remaining_chunks:
+            logger.info("All chunks already exist in Qdrant. Upload complete.")
+            processing_time = time.time() - start_time
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+            return UploadResponse(
+                success=True,
+                chunks_created=len(chunks),
+                processing_time=processing_time,
+                message=f"Document '{file.filename}' already completely processed. Skipped {len(existing_ids)} existing chunks."
             )
-        except Exception as e:
-            logger.error(f"Database storage failed: {str(e)}", exc_info=True)
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to store document in database: {str(e)}"
-            )
+
+        BATCH_SIZE = 20
+        total_batches = (len(remaining_chunks) + BATCH_SIZE - 1) // BATCH_SIZE
         
-        logger.info(f"Successfully stored {len(chunks)} points in Qdrant")
+        logger.info(f"Processing {len(remaining_chunks)} remaining chunks in {total_batches} batches...")
+        
+        for batch_idx in range(total_batches):
+            batch_start = batch_idx * BATCH_SIZE
+            batch_end = min(batch_start + BATCH_SIZE, len(remaining_chunks))
+            batch_chunks = remaining_chunks[batch_start:batch_end]
+            batch_texts = [c.text for c in batch_chunks]
+            
+            logger.info(f"Processing batch {batch_idx + 1}/{total_batches} ({len(batch_chunks)} chunks)...")
+            
+            try:
+                # Generate embeddings for batch
+                embeddings = await asyncio.to_thread(embedding_manager.generate_all_embeddings, batch_texts)
+                
+                # Store points in Qdrant
+                await asyncio.to_thread(qdrant_manager.store_points, collection_name, batch_chunks, embeddings)
+                
+            except ConnectionError as e:
+                logger.error(f"Database connection failed during storage: {str(e)}", exc_info=True)
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Connection failed during batch {batch_idx + 1}. You can retry uploading to resume where it left off."
+                )
+            except Exception as e:
+                logger.error(f"Failed processing batch {batch_idx + 1}: {str(e)}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed during batch {batch_idx + 1}. You can retry uploading to resume. Error: {str(e)}"
+                )
+        
+        logger.info(f"Successfully processed and stored all {len(remaining_chunks)} remaining chunks")
         
         # Calculate processing time
         processing_time = time.time() - start_time
@@ -713,14 +748,14 @@ async def upload_document(
         # Return success response
         logger.info(
             f"Upload complete - File: {file.filename}, "
-            f"Chunks: {len(chunks)}, Time: {processing_time:.2f}s"
+            f"Total Chunks: {len(chunks)}, Processed Now: {len(remaining_chunks)}, Time: {processing_time:.2f}s"
         )
         
         return UploadResponse(
             success=True,
             chunks_created=len(chunks),
             processing_time=processing_time,
-            message=f"Successfully uploaded and processed '{file.filename}'. Created {len(chunks)} chunks in {processing_time:.2f}s."
+            message=f"Successfully uploaded '{file.filename}'. Processed {len(remaining_chunks)} chunks in {processing_time:.2f}s. (Skipped {len(existing_ids)} already processed)"
         )
         
     except HTTPException:

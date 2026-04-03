@@ -259,14 +259,14 @@ class TestPointStorage:
         # Store points
         qdrant_manager.store_points(collection_name, sample_chunks, sample_embeddings)
         
-        # Retrieve a point and verify metadata
-        points = qdrant_manager.client.retrieve(
+        # Retrieve points by scrolling and verify metadata
+        points, _ = qdrant_manager.client.scroll(
             collection_name=collection_name,
-            ids=[1]
+            limit=10
         )
         
-        assert len(points) == 1
-        point = points[0]
+        assert len(points) == 3
+        point = next(p for p in points if p.payload["chunk_id"] == 1)
         assert point.payload["text"] == sample_chunks[0].text
         assert point.payload["chunk_id"] == sample_chunks[0].chunk_id
         assert point.payload["parent_id"] == sample_chunks[0].parent_id
